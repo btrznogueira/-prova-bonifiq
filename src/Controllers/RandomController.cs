@@ -10,11 +10,11 @@ namespace ProvaPub.Controllers
 	/// </summary>
 	[ApiController]
 	[Route("[controller]")]
-	public class Parte1Controller :  ControllerBase
+	public class RandomController :  ControllerBase
 	{
 		private readonly RandomService _randomService;
 
-		public Parte1Controller(RandomService randomService)
+		public RandomController(RandomService randomService)
 		{
 			_randomService = randomService;
 		}
