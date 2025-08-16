@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using ProvaPub.Interfaces;
 using ProvaPub.Models;
-using ProvaPub.Repository;
-using ProvaPub.Services;
+using System.Runtime.InteropServices;
 
 namespace ProvaPub.Controllers
 {
@@ -18,18 +17,29 @@ namespace ProvaPub.Controllers
     /// </summary>
     [ApiController]
 	[Route("[controller]")]
-	public class Parte3Controller :  ControllerBase
+	public class OrderController :  ControllerBase
 	{
+        private readonly IOrderService _orderService;
+
+        public OrderController(IOrderService orderService) 
+        { 
+            _orderService = orderService;
+        }
+
 		[HttpGet("orders")]
 		public async Task<Order> PlaceOrder(string paymentMethod, decimal paymentValue, int customerId)
-		{
-            var contextOptions = new DbContextOptionsBuilder<TestDbContext>()
-    .UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=Teste;Trusted_Connection=True;")
-    .Options;
+        {
+            var order = await _orderService.PayOrder(paymentMethod, paymentValue, customerId);
+            var brasilTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? "E. South America Standard Time"
+                    : "America/Sao_Paulo"
+            );
 
-            using var context = new TestDbContext(contextOptions);
+            var brasilTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderDate, brasilTimeZone);
+            order.OrderDate = brasilTime;
 
-            return await new OrderService(context).PayOrder(paymentMethod, paymentValue, customerId);
-		}
-	}
+            return order;
+        }
+    }
 }

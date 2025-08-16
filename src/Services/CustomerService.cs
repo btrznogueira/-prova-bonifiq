@@ -1,21 +1,27 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ProvaPub.Commons;
+using ProvaPub.Interfaces;
 using ProvaPub.Models;
 using ProvaPub.Repository;
 
 namespace ProvaPub.Services
 {
-    public class CustomerService
+    public class CustomerService : ICustomerService
     {
-        TestDbContext _ctx;
+        private readonly TestDbContext _ctx;
+        private readonly IDateTimeService _dateTimeService;
 
-        public CustomerService(TestDbContext ctx)
+        public CustomerService(TestDbContext ctx, IDateTimeService dateTimeService)
         {
             _ctx = ctx;
+            _dateTimeService = dateTimeService;
         }
 
-        public CustomerList ListCustomers(int page)
+        public PagedResult<Customer> ListCustomers(int page)
         {
-            return new CustomerList() { HasNext = false, TotalCount = 10, Customers = _ctx.Customers.ToList() };
+            return _ctx.Customers
+                .OrderBy(c => c.Id)
+                .ToPagedResult(page, 10);
         }
 
         public async Task<bool> CanPurchase(int customerId, decimal purchaseValue)
@@ -29,7 +35,7 @@ namespace ProvaPub.Services
             if (customer == null) throw new InvalidOperationException($"Customer Id {customerId} does not exists");
 
             //Business Rule: A customer can purchase only a single time per month
-            var baseDate = DateTime.UtcNow.AddMonths(-1);
+            var baseDate = _dateTimeService.UtcNow.AddMonths(-1);
             var ordersInThisMonth = await _ctx.Orders.CountAsync(s => s.CustomerId == customerId && s.OrderDate >= baseDate);
             if (ordersInThisMonth > 0)
                 return false;
@@ -40,7 +46,7 @@ namespace ProvaPub.Services
                 return false;
 
             //Business Rule: A customer can purchases only during business hours and working days
-            if (DateTime.UtcNow.Hour < 8 || DateTime.UtcNow.Hour > 18 || DateTime.UtcNow.DayOfWeek == DayOfWeek.Saturday || DateTime.UtcNow.DayOfWeek == DayOfWeek.Sunday)
+            if (_dateTimeService.UtcNow.Hour < 8 || _dateTimeService.UtcNow.Hour > 18 || _dateTimeService.UtcNow.DayOfWeek == DayOfWeek.Saturday || _dateTimeService.UtcNow.DayOfWeek == DayOfWeek.Sunday)
                 return false;
 
 
